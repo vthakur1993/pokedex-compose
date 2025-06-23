@@ -3,7 +3,7 @@ package com.example.pokedex.navigation
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
-import com.example.pokedex.models.PokemonListItem
+import com.example.pokedex.database.entity.PokemonAsset
 import com.example.pokedex.navigation.PokedexRoutes.PokemonInfoScreenRoute
 import com.example.pokedex.navigation.navtypes.PokemonListItemNavType
 import com.example.pokedex.screens.PokedexScreen
@@ -20,7 +20,7 @@ fun NavGraphBuilder.pokedexNavigation(
     }
 
     composable<PokemonInfoScreenRoute>(
-        typeMap = PokemonListItem.getType(pokemonListItemNavType)
+        typeMap = PokemonAsset.getType(pokemonListItemNavType)
     ) {
         PokemonInfoScreen({
             navController.popBackStack()

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -27,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarColors
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -54,9 +56,11 @@ import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import coil3.request.crossfade
 import com.example.pokedex.R
-import com.example.pokedex.models.PokemonListItem
+import com.example.pokedex.database.entity.PokemonAsset
+import com.example.pokedex.screens.widgets.PokemonListFooter
 import com.example.pokedex.ui.theme.PokemonTheme
 import com.example.pokedex.utils.getVerticalGradient
+import com.example.pokedex.viewmodel.FooterUIState
 import com.example.pokedex.viewmodel.PokedexState
 import com.example.pokedex.viewmodel.PokedexViewmodel
 import kotlinx.coroutines.launch
@@ -65,7 +69,7 @@ import okhttp3.internal.toImmutableList
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PokedexScreen(modifier: Modifier = Modifier,
-                  pokemonClicked: (PokemonListItem) -> Unit,
+                  pokemonClicked: (PokemonAsset) -> Unit,
                   pokedexViewmodel: PokedexViewmodel = hiltViewModel()
 ) {
     Scaffold(
@@ -79,7 +83,9 @@ fun PokedexScreen(modifier: Modifier = Modifier,
     ) { innerPadding ->
         val pokemons: State<PokedexState> = pokedexViewmodel.state.collectAsStateWithLifecycle()
         val pokemonsList = pokedexViewmodel.pokemonListItems.collectAsStateWithLifecycle()
+        val footerUiState = pokedexViewmodel.footerUIState.collectAsStateWithLifecycle()
         PokedexScreen(modifier, innerPadding, pokemons.value, pokemonsList.value.toImmutableList(),
+            footerUiState.value,
             { pokedexViewmodel.fetchMoreItems() },
             pokemonClicked
         )
@@ -91,9 +97,10 @@ private fun PokedexScreen(
     modifier: Modifier = Modifier,
     innerPadding: PaddingValues = PaddingValues(0.dp),
     state: PokedexState = PokedexState.Loading,
-    pokemonsList: List<PokemonListItem>,
+    pokemonsList: List<PokemonAsset>,
+    footerUIState: FooterUIState,
     fetchMoreItems: () -> Unit,
-    pokemonClicked: (PokemonListItem) -> Unit
+    pokemonClicked: (PokemonAsset) -> Unit
 ) {
     Box(
         modifier = modifier
@@ -101,46 +108,44 @@ private fun PokedexScreen(
             .padding(innerPadding),
         contentAlignment = Alignment.Center
     ) {
-        when (state) {
-            is PokedexState.Loading -> {
-                PokedexLoadingScreen()
+        val lazyListState = rememberLazyGridState()
+        val reachedBottom by remember {
+            derivedStateOf {
+                val lastVisibleItem = lazyListState.layoutInfo.visibleItemsInfo.lastOrNull()
+                val totalItems = lazyListState.layoutInfo.totalItemsCount
+
+                // If there are no items, we can't be at the bottom
+                if (totalItems == 0) return@derivedStateOf false
+
+                // Check if the last visible item is close to the total count
+                // You can adjust the threshold (e.g., 5 for 5 items before the end)
+                val threshold = 5
+                val isAtEnd =
+                    lastVisibleItem != null && lastVisibleItem.index >= totalItems - 1 - threshold
+                isAtEnd
             }
+        }
+        LaunchedEffect(reachedBottom) {
+            if (reachedBottom) fetchMoreItems()
+        }
+        PokedexList(pokemonsList, lazyListState, footerUIState, pokemonClicked)
 
-            is PokedexState.Success -> {
-                val lazyListState = rememberLazyGridState()
-                val reachedBottom by remember {
-                    derivedStateOf {
-                        val lastVisibleItem = lazyListState.layoutInfo.visibleItemsInfo.lastOrNull()
-                        val totalItems = lazyListState.layoutInfo.totalItemsCount
+        if (state == PokedexState.Loading && pokemonsList.isEmpty()) {
+            PokedexLoadingScreen()
+        }
 
-                        // If there are no items, we can't be at the bottom
-                        if (totalItems == 0) return@derivedStateOf false
-
-                        // Check if the last visible item is close to the total count
-                        // You can adjust the threshold (e.g., 5 for 5 items before the end)
-                        val threshold = 5
-                        val isAtEnd = lastVisibleItem != null && lastVisibleItem.index >= totalItems - 1 - threshold
-                        isAtEnd
-                    }
-                }
-                if (reachedBottom) {
-                    fetchMoreItems()
-                }
-                PokedexList(pokemonsList, lazyListState, pokemonClicked)
-            }
-
-            is PokedexState.Error -> {
-                PokedexErrorScreen(state.message)
-            }
+        if (state is PokedexState.Error && pokemonsList.isEmpty()) {
+            PokedexErrorScreen(state.message)
         }
     }
 }
 
 @Composable
 private fun PokedexList(
-    pokemonsList: List<PokemonListItem>,
+    pokemonsList: List<PokemonAsset>,
     lazyListState: LazyGridState,
-    pokemonClicked: (PokemonListItem) -> Unit) {
+    footerUIState: FooterUIState,
+    pokemonClicked: (PokemonAsset) -> Unit) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
         contentPadding = PaddingValues(8.dp),
@@ -220,6 +225,17 @@ private fun PokedexList(
             }
 
         }
+
+        if (footerUIState != FooterUIState.EndReached && !pokemonsList.isEmpty()) {
+            item(
+                span = {
+                    // This is the key part: GridItemSpan(maxLineSpan) makes it span all columns
+                    GridItemSpan(maxLineSpan)
+                }
+            ) {
+                PokemonListFooter(footerUIState)
+            }
+        }
     }
 }
 
@@ -256,11 +272,12 @@ fun PokedexErrorScreen(message: String, modifier: Modifier = Modifier) {
 @Composable
 fun PokedexScreenPreview() {
     PokemonTheme {
-        val list: List<PokemonListItem> = List(20) { PokemonListItem("Pokemonname: $it", "url: $it") }
+        val list: List<PokemonAsset> = List(20) { PokemonAsset(0, "Pokemonname: $it", "url: $it") }
         PokedexScreen(
             modifier = Modifier.background(Color.White),
             state = PokedexState.Success,
             pokemonsList = list,
+            footerUIState = FooterUIState.Loading,
             fetchMoreItems = {},
             pokemonClicked = {}
         )

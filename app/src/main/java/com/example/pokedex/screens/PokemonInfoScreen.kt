@@ -1,5 +1,6 @@
 package com.example.pokedex.screens
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -12,9 +13,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,12 +55,14 @@ import com.example.pokedex.models.PokemonStats
 import com.example.pokedex.models.PokemonType
 import com.example.pokedex.models.Stat
 import com.example.pokedex.models.Type
+import com.example.pokedex.screens.widgets.PokemonStatsUI
 import com.example.pokedex.utils.getPokemonTypeColor
 import com.example.pokedex.utils.getVerticalGradient
 import com.example.pokedex.viewmodel.PokemonInfoState
 import com.example.pokedex.viewmodel.PokemonInfoViewmodel
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PokemonInfoScreen(backClicked: () -> Unit) {
         Box(
@@ -60,13 +70,11 @@ fun PokemonInfoScreen(backClicked: () -> Unit) {
         ) {
             val pokemonInfoViewmodel: PokemonInfoViewmodel = hiltViewModel()
             val uiState = remember { pokemonInfoViewmodel.uiState }
+            val scrollState = rememberScrollState()
             val uiStateValue = uiState.value
             when (uiStateValue) {
                 is PokemonInfoState.Error -> {
-                    Box(modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center) {
-                        PokedexErrorScreen(uiStateValue.message)
-                    }
+                    PokemonInfoErrorScreen(backClicked, uiStateValue)
                 }
 
                 PokemonInfoState.Loading -> {
@@ -77,15 +85,58 @@ fun PokemonInfoScreen(backClicked: () -> Unit) {
                 }
 
                 is PokemonInfoState.Success -> {
-                    PokemonDetail(uiStateValue.pokemonInfo, uiStateValue.imageUrl, backClicked)
+                    PokemonDetail(uiStateValue.pokemonInfo, uiStateValue.imageUrl, scrollState, backClicked)
                 }
             }
         }
 }
 
 @Composable
-fun PokemonDetail(info: PokemonInfo, imageUrl: String, backClicked: () -> Unit) {
-    Column(Modifier.fillMaxSize(),
+@OptIn(ExperimentalMaterial3Api::class)
+private fun PokemonInfoErrorScreen(
+    backClicked: () -> Unit,
+    uiStateValue: PokemonInfoState.Error
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Pokedex") },
+                modifier = Modifier.background(MaterialTheme.colorScheme.primary),
+                navigationIcon = {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_arrow),
+                        tint = Color.White,
+                        contentDescription = null,
+                        modifier = Modifier.padding(10.dp).clickable { backClicked() }
+                    )
+                },
+                colors = TopAppBarColors(
+                    MaterialTheme.colorScheme.primary,
+                    MaterialTheme.colorScheme.primary,
+                    MaterialTheme.colorScheme.primary,
+                    MaterialTheme.colorScheme.onPrimary,
+                    MaterialTheme.colorScheme.primary
+                )
+            )
+        }
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            PokedexErrorScreen(uiStateValue.message)
+        }
+    }
+}
+
+@Composable
+fun PokemonDetail(
+    info: PokemonInfo,
+    imageUrl: String,
+    scrollState: ScrollState,
+    backClicked: () -> Unit
+) {
+    Column(Modifier.fillMaxSize().verticalScroll(scrollState),
         verticalArrangement = Arrangement.spacedBy(10.dp)) {
         PokemonHeader(imageUrl, backClicked)
         PokemonTypeUIWithName(info)
@@ -250,7 +301,7 @@ fun PokemonDetailPreview() {
         PokemonStats(150, Stat("attack")),
         PokemonStats(50, Stat("defense")),
     ))
-    PokemonDetail(info, "", { })
+    PokemonDetail(info, "", rememberScrollState()) { }
 }
 
 @Preview

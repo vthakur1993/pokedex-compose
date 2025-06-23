@@ -1,6 +1,8 @@
 package com.example.pokedex.models
 
 import androidx.annotation.ColorRes
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 import com.example.pokedex.R
 import com.example.pokedex.models.PokemonInfo.Companion.MAX_HP
 import com.squareup.moshi.Json
@@ -8,9 +10,11 @@ import com.squareup.moshi.JsonClass
 import kotlinx.serialization.Serializable
 
 @Serializable
+@Entity
 @JsonClass(generateAdapter = true)
 data class PokemonInfo(
     val id: Int,
+    @PrimaryKey
     @field:Json(name = "name")
     val nameField: String,
     val height: Int,
@@ -23,10 +27,14 @@ data class PokemonInfo(
     val name: String
         get() = nameField.replaceFirstChar { it.uppercase() }
 
-    val hp = stats.find { it.stat.nameField == "hp" }?.baseStat ?: 0
-    val attack = stats.find { it.stat.nameField == "attack" }?.baseStat ?: 0
-    val speed = stats.find { it.stat.nameField == "speed" }?.baseStat ?: 0
-    val defense = stats.find { it.stat.nameField == "defense" }?.baseStat ?: 0
+    val hp: Int
+        get() = stats.find { it.stat.nameField == "hp" }?.baseStat ?: 0
+    val attack: Int
+        get() = stats.find { it.stat.nameField == "attack" }?.baseStat ?: 0
+    val speed: Int
+        get() = stats.find { it.stat.nameField == "speed" }?.baseStat ?: 0
+    val defense: Int
+        get() = stats.find { it.stat.nameField == "defense" }?.baseStat ?: 0
 
     fun getIdString(): String = String.format("#%03d", id)
     fun getWeightString(): String = String.format("%.1f KG", weight.toFloat() / 10)

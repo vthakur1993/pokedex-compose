@@ -1,4 +1,4 @@
-package com.example.pokedex.screens
+package com.example.pokedex.screens.widgets
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearOutSlowInEasing

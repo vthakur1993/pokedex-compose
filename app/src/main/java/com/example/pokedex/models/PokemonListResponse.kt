@@ -1,13 +1,11 @@
 package com.example.pokedex.models
 
 import android.os.Parcelable
-import com.example.pokedex.navigation.navtypes.PokemonListItemNavType
+import com.example.pokedex.database.entity.PokemonAsset
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.Serializable
-import kotlin.reflect.KType
-import kotlin.reflect.typeOf
 
 @JsonClass(generateAdapter = true)
 @Serializable
@@ -28,17 +26,12 @@ data class PokemonListItem(
 ): Parcelable {
     val name: String
         get() = nameField.replaceFirstChar { it.uppercase() }
+}
 
-    val imageUrl: String
-        inline get() {
-            val index = url.split("/".toRegex()).dropLast(1).last()
-            return "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/" +
-                    "pokemon/other/official-artwork/$index.png"
-        }
-
-    companion object {
-        fun getType(pokemonListItemNavType: PokemonListItemNavType): Map<KType, PokemonListItemNavType> {
-            return mapOf(typeOf<PokemonListItem>() to pokemonListItemNavType)
-        }
-    }
+fun PokemonListItem.toAsset(page: Int): PokemonAsset {
+    return PokemonAsset(
+        page = page,
+        nameField = nameField,
+        url = url
+    )
 }

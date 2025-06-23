@@ -1,6 +1,6 @@
 package com.example.pokedex.navigation
 
-import com.example.pokedex.models.PokemonListItem
+import com.example.pokedex.database.entity.PokemonAsset
 import kotlinx.serialization.Serializable
 
 sealed interface PokedexRoutes {
@@ -8,5 +8,5 @@ sealed interface PokedexRoutes {
     data object PokedexScreenRoute: PokedexRoutes
 
     @Serializable
-    data class PokemonInfoScreenRoute(val pokemonInfo: PokemonListItem): PokedexRoutes
+    data class PokemonInfoScreenRoute(val pokemonInfo: PokemonAsset): PokedexRoutes
 }

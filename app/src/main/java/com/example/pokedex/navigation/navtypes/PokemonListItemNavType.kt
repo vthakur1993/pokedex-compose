@@ -4,20 +4,17 @@ import android.net.Uri
 import android.os.Build
 import androidx.navigation.NavType
 import androidx.savedstate.SavedState
-import com.example.pokedex.di.AppModule.gson
-import com.example.pokedex.models.PokemonListItem
+import com.example.pokedex.database.entity.PokemonAsset
 import com.google.gson.Gson
-import com.squareup.moshi.Json
 import javax.inject.Inject
-import kotlin.jvm.java
 
-class PokemonListItemNavType @Inject constructor(val gson: Gson): NavType<PokemonListItem>(
+class PokemonListItemNavType @Inject constructor(val gson: Gson): NavType<PokemonAsset>(
     isNullableAllowed = true
 ) {
     override fun put(
         bundle: SavedState,
         key: String,
-        value: PokemonListItem
+        value: PokemonAsset
     ) {
         bundle.putParcelable(key, value)
     }
@@ -25,20 +22,20 @@ class PokemonListItemNavType @Inject constructor(val gson: Gson): NavType<Pokemo
     override fun get(
         bundle: SavedState,
         key: String
-    ): PokemonListItem? {
+    ): PokemonAsset? {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            bundle.getParcelable(key, PokemonListItem::class.java)
+            bundle.getParcelable(key, PokemonAsset::class.java)
         } else {
             @Suppress("DEPRECATION")
             bundle.getParcelable(key)
         }
     }
 
-    override fun parseValue(value: String): PokemonListItem {
-        return gson.fromJson(value, PokemonListItem::class.java)
+    override fun parseValue(value: String): PokemonAsset {
+        return gson.fromJson(value, PokemonAsset::class.java)
     }
 
-    override fun serializeAsValue(value: PokemonListItem): String {
+    override fun serializeAsValue(value: PokemonAsset): String {
         return Uri.encode(gson.toJson(value))
     }
 
