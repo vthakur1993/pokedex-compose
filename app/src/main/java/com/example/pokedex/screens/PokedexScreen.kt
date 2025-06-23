@@ -69,8 +69,7 @@ import okhttp3.internal.toImmutableList
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PokedexScreen(modifier: Modifier = Modifier,
-                  pokemonClicked: (PokemonAsset) -> Unit,
-                  pokedexViewmodel: PokedexViewmodel = hiltViewModel()
+                  pokemonClicked: (PokemonAsset) -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -81,6 +80,7 @@ fun PokedexScreen(modifier: Modifier = Modifier,
             )
         }
     ) { innerPadding ->
+        val pokedexViewmodel: PokedexViewmodel = hiltViewModel()
         val pokemons: State<PokedexState> = pokedexViewmodel.state.collectAsStateWithLifecycle()
         val pokemonsList = pokedexViewmodel.pokemonListItems.collectAsStateWithLifecycle()
         val footerUiState = pokedexViewmodel.footerUIState.collectAsStateWithLifecycle()

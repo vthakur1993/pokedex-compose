@@ -18,8 +18,12 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "com.example.pokedex.CustomTestRunner"
+        //testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunnerArguments.putAll( mutableMapOf(
+            "clearPackageData" to "true",
+            "dagger.hilt.android.internal.testing.TestApplicationComponentManager.HiltTestApplication" to "dagger.hilt.android.testing.HiltTestApplication"
+        ))
     }
 
     buildTypes {
@@ -41,6 +45,11 @@ android {
     buildFeatures {
         compose = true
     }
+    testOptions {
+        unitTests.apply {
+            isIncludeAndroidResources = true
+        }
+    }
 }
 
 dependencies {
@@ -55,10 +64,19 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.palette)
     testImplementation(libs.junit)
+    testImplementation(libs.room.test)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core.ktx)
+    testImplementation(libs.androidx.ui.test.junit4)
+    testImplementation(libs.androidx.navigation.testing)
+    testImplementation(libs.hilt.android.testing)
+    androidTestImplementation(libs.robolectric)
+    androidTestImplementation(libs.hilt.android.testing)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
+    androidTestImplementation(libs.androidx.navigation.testing)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation(libs.androidx.navigation)
