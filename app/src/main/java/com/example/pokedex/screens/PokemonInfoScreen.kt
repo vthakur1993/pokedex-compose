@@ -121,7 +121,7 @@ private fun PokemonInfoErrorScreen(
         }
     ) { innerPadding ->
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().padding(innerPadding),
             contentAlignment = Alignment.Center
         ) {
             PokedexErrorScreen(uiStateValue.message)
