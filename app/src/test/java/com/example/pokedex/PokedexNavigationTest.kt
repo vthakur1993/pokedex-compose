@@ -6,13 +6,10 @@ import androidx.navigation.compose.ComposeNavigator
 import androidx.navigation.testing.TestNavHostController
 import androidx.navigation.toRoute
 import androidx.test.core.app.ApplicationProvider
-import com.example.pokedex.database.entity.PokemonAsset
 import com.example.pokedex.navigation.PokedexNavHost
 import com.example.pokedex.navigation.PokedexRoutes
 import com.example.pokedex.navigation.PokedexRoutes.PokemonInfoScreenRoute
-import com.example.pokedex.navigation.navtypes.PokemonListItemNavType
 import com.example.pokedex.utils.Mocks
-import com.squareup.moshi.Json
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
@@ -28,7 +25,7 @@ import org.robolectric.annotation.Config
 //@RunWith(AndroidJUnit4::class)
 @RunWith(RobolectricTestRunner::class)
 //@Config(application = HiltTestApplication::class)
-@Config(application = HiltTestApplication::class, sdk = [33])
+@Config(application = HiltTestApplication::class)
 class PokedexNavigationTest {
 
     @get:Rule(order = 0)
