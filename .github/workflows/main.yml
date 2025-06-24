@@ -1,0 +1,90 @@
+# Workflow Name: Clearly identifies the purpose of the workflow
+name: Auto Tag Release with App Version
+
+# Workflow Triggers: Define when this workflow should run
+on:
+  push:
+    branches:
+      - main # This workflow triggers on any push event to the 'main' branch
+
+# Condition to prevent infinite loops and allow manual skips:
+# - '!startsWith(github.ref, 'refs/tags/')': Crucial to prevent the workflow
+#   from triggering itself when it pushes the new tag.
+# - '!contains(github.event.head_commit.message, '[skip tag]')': Allows
+#   developers to include '[skip tag]' in their commit message to bypass
+#   tag creation for minor changes (e.g., documentation updates).
+if: "!startsWith(github.ref, 'refs/tags/') && !contains(github.event.head_commit.message, '[skip tag]')"
+
+# Jobs: Define the tasks to be performed
+jobs:
+  create_release_tag:
+    runs-on: ubuntu-latest # Specify the runner environment (e.g., Ubuntu Linux)
+
+    steps:
+      - name: Checkout code
+        # Uses the official checkout action to clone the repository.
+        # 'fetch-depth: 0' is important to get the full history required for 'git describe' or similar
+        # if you later decide to use more complex versioning (e.g., semantic versioning).
+        uses: actions/checkout@v4
+        with:
+          # The GITHUB_TOKEN has default permissions to push tags to the repository.
+          # No need to create a separate Personal Access Token for this common use case.
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0 # Fetch all history to ensure proper tag operations if needed
+
+      - name: Extract versionName from build.gradle
+        # This step reads the versionName from your app/build.gradle file.
+        # It assumes versionName is declared on a single line like:
+        # versionName "1.0.0"
+        # versionName = "1.0.0"
+        # versionName = '1.0.0'
+        id: get_version_name # Assign an ID to this step to access its outputs
+        run: |
+          # Use grep to find the line containing 'versionName' and then awk/sed to extract the value.
+          # Adjust the path if your build.gradle is not in app/
+          VERSION_NAME=$(grep -oP 'versionName\s*["\']?\s*\K[^"\']+?(?=["\'])' app/build.gradle || \
+                         grep -oP 'versionName\s*=\s*["\']?\s*\K[^"\']+?(?=["\'])' app/build.gradle)
+
+          if [ -z "$VERSION_NAME" ]; then
+            echo "Error: versionName not found in app/build.gradle. Exiting."
+            exit 1
+          fi
+          echo "Extracted versionName: $VERSION_NAME"
+          # Set the extracted versionName as an output variable for this step
+          echo "APP_VERSION_NAME=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Generate New Tag Name
+        # This step generates a unique tag name using the extracted versionName and commit SHA.
+        id: generate_tag_name # Assign an ID to this step to access its outputs
+        run: |
+          # Get the extracted app version name from the previous step's output
+          APP_VERSION="${{ steps.get_version_name.outputs.APP_VERSION_NAME }}"
+          # Construct the full tag name, e.g., v1.0.0
+          NEW_TAG_NAME="v${APP_VERSION}"
+
+          echo "Generated new tag name: ${NEW_TAG_NAME}"
+          # Set this tag name as a step output, so subsequent steps can use it.
+          echo "NEW_TAG_NAME=${NEW_TAG_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Create and Push Git Tag
+        # This step creates the annotated tag and pushes it to the remote repository.
+        run: |
+          # Retrieve the generated tag name from the previous step's output
+          TAG_TO_CREATE="${{ steps.generate_tag_name.outputs.NEW_TAG_NAME }}"
+
+          # Create an annotated tag. Annotated tags are full Git objects,
+          # recommended for releases as they contain a message and tagger info.
+          git tag -a "${TAG_TO_CREATE}" -m "Release ${TAG_TO_CREATE} - Triggered by update to main branch"
+
+          # Push the newly created tag to the 'origin' remote.
+          # The GITHUB_TOKEN from the checkout action handles authentication.
+          git push origin "${TAG_TO_CREATE}"
+
+          echo "Successfully created and pushed tag: ${TAG_TO_CREATE}"
+
+      - name: Notify on Tag Creation (Optional)
+        # You can add additional steps here, e.g., to create a GitHub Release,
+        # send a Slack notification, or update a changelog.
+        run: |
+          echo "Tag ${{ steps.generate_tag_name.outputs.NEW_TAG_NAME }} created for main branch update."
+          echo "Check it out at: https://github.com/${{ github.repository }}/releases/tag/${{ steps.generate_tag_name.outputs.NEW_TAG_NAME }}"
