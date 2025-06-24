@@ -13,11 +13,11 @@ on:
 # - '!contains(github.event.head_commit.message, '[skip tag]')': Allows
 #   developers to include '[skip tag]' in their commit message to bypass
 #   tag creation for minor changes (e.g., documentation updates).
-if: "!startsWith(github.ref, 'refs/tags/') && !contains(github.event.head_commit.message, '[skip tag]')"
 
 # Jobs: Define the tasks to be performed
 jobs:
   create_release_tag:
+    if: "!startsWith(github.ref, 'refs/tags/') && !contains(github.event.head_commit.message, '[skip tag]')"
     runs-on: ubuntu-latest # Specify the runner environment (e.g., Ubuntu Linux)
 
     steps:
