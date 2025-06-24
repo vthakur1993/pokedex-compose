@@ -69,6 +69,10 @@ jobs:
       - name: Create and Push Git Tag
         # This step creates the annotated tag and pushes it to the remote repository.
         run: |
+          # Configure Git identity
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
           # Retrieve the generated tag name from the previous step's output
           TAG_TO_CREATE="${{ steps.generate_tag_name.outputs.NEW_TAG_NAME }}"
 
