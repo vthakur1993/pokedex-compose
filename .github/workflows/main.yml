@@ -42,7 +42,7 @@ jobs:
         run: |
           # Use grep to find the line containing 'versionName' and then awk/sed to extract the value.
           # Adjust the path if your build.gradle is not in app/
-          VERSION_NAME=$(sed -n "s/.*versionName[[:space:]]*=[[:space:]]*['\"]\([^'\"]*\)['\"].*//p; s/.*versionName[[:space:]]*['\"]\([^'\"]*\)['\"].*//p" app/build.gradle | head -1)
+          VERSION_NAME=$(sed -n "s/.*versionName[[:space:]]*=[[:space:]]*['\"]\([^'\"]*\)['\"].*//p; s/.*versionName[[:space:]]*['\"]\([^'\"]*\)['\"].*//p" pokedex/app/build.gradle.kts | head -1)
 
 
           if [ -z "$VERSION_NAME" ]; then
