@@ -21,8 +21,8 @@ import javax.inject.Inject
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class PokedexViewmodel @Inject constructor(
-    val pokedexNetworkRepository: PokedexNetworkRepository,
-    val pokemonDao: PokemonDao,
+    private val pokedexNetworkRepository: PokedexNetworkRepository,
+    private val pokemonDao: PokemonDao,
 ): ViewModel() {
     private val _state: MutableStateFlow<PokedexState> = MutableStateFlow(PokedexState.Loading)
     val state: StateFlow<PokedexState> = _state.asStateFlow()
@@ -34,13 +34,12 @@ class PokedexViewmodel @Inject constructor(
     val footerUIState = _footerUIState.asStateFlow()
 
     private val _startOperation = MutableStateFlow(0)
-    var currentPageIndex = 0
+    private var currentPageIndex = 0
 
     init {
         viewModelScope.launch {
             _startOperation.flatMapLatest {
                 val pokemonList = pokemonDao.getPokemonList(currentPageIndex).first()
-                println("Vipulpre pokemonList for DB :: ${pokemonList.isEmpty()}")
                 if (pokemonList.isEmpty()) {
                     pokedexNetworkRepository.fetchPokemonList(
                         page = currentPageIndex,
@@ -52,21 +51,20 @@ class PokedexViewmodel @Inject constructor(
 
                         },
                         onError = {
-                            println("Vipulpre onError :: $it, $currentPageIndex")
-                            _state.value = PokedexState.Error(it)
+                             _state.value = PokedexState.Error(it)
                             _footerUIState.value = FooterUIState.Error(it)
                             currentPageIndex--
                         }
                     )
                         .flatMapLatest { list ->
-                            pokemonDao.insertPokemonList(list.map { it.toAsset(currentPageIndex) })
+                            val map = list.map { it.toAsset(currentPageIndex) }
+                            pokemonDao.insertPokemonList(map)
                             pokemonDao.getPokemonList(page = currentPageIndex)
                         }
                 } else {
                     flow { emit(pokemonList) }
                 }
             }.collect { it: List<PokemonAsset> ->
-                println("Vipulpre collect called :: $it")
                 _pokemonListItems.update { pokemonList ->
                     pokemonList + it
                 }
@@ -75,12 +73,11 @@ class PokedexViewmodel @Inject constructor(
         }
     }
 
-    fun fetchPokemons() {
+    private fun fetchPokemons() {
         _startOperation.value++
     }
 
     fun fetchMoreItems() {
-        println("Vipulpre fetchMoreItems for:: ${currentPageIndex + 1}")
         if (_state.value == PokedexState.Loading) return
         currentPageIndex++
         fetchPokemons()

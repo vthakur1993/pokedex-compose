@@ -31,7 +31,6 @@ class PokemonInfoViewmodel @Inject constructor(
         viewModelScope.launch {
             val pokemonAsset = savedStateHandle.toRoute<PokemonInfoScreenRoute>(typeMap = PokemonAsset.getType(pokemonListItemNavType)).pokemonInfo
             val pokemonInfo = pokemonInfoDao.getPokemonInfo(pokemonAsset.nameField)
-            println("Vipulpre Teying pokemonInfo :: $pokemonInfo, $pokemonAsset")
             if (pokemonInfo == null) {
                 pokedexNetworkRepository.fetchPokemonInfo(
                     pokemonAsset.name,
@@ -46,7 +45,6 @@ class PokemonInfoViewmodel @Inject constructor(
                     pokemonInfoDao.insertPokemonInfo(it)
                     emit(pokemonInfoDao.getPokemonInfo(name = it.nameField))
                 }.collect {
-                    println("Vipulpre info from NW :: $it")
                     it?.let {
                         _uiState.value = PokemonInfoState.Success(it, pokemonAsset.imageUrl)
                     } ?: run {
@@ -54,7 +52,6 @@ class PokemonInfoViewmodel @Inject constructor(
                     }
                 }
             } else {
-                println("Vipulpre Info from Db")
                 _uiState.value = PokemonInfoState.Success(pokemonInfo, pokemonAsset.imageUrl)
             }
         }

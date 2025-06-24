@@ -70,6 +70,7 @@ dependencies {
     testImplementation(libs.androidx.ui.test.junit4)
     testImplementation(libs.androidx.navigation.testing)
     testImplementation(libs.hilt.android.testing)
+    testImplementation(libs.mockito)
     androidTestImplementation(libs.robolectric)
     androidTestImplementation(libs.hilt.android.testing)
     androidTestImplementation(libs.androidx.junit)

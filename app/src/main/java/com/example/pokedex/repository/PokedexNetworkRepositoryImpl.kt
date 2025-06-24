@@ -28,11 +28,13 @@ class PokedexNetworkRepositoryImpl @Inject constructor(
         val fetchPokemonList = pokedexApi.fetchPokemonList(offset = page * PAGE_SIZE)
         if (fetchPokemonList.isSuccessful) {
             emit(fetchPokemonList.body()!!.results)
+        } else {
+            throw Exception(fetchPokemonList.errorBody()?.string() ?: fetchPokemonList.message())
         }
     }
         .catch {
             it.printStackTrace()
-        onError(it.message ?: "Something went wrong")
+            onError(it.message ?: "Something went wrong")
         }
         .onStart {
             onStart()
@@ -51,6 +53,8 @@ class PokedexNetworkRepositoryImpl @Inject constructor(
         val response = pokedexApi.fetchPokemonInfo(name)
         if (response.isSuccessful) {
             emit(response.body()!!)
+        } else {
+            throw Exception(response.errorBody()?.string() ?: response.message())
         }
     }.catch {
         it.printStackTrace()

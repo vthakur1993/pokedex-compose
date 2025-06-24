@@ -23,6 +23,7 @@ gson = "2.12.1"
 room = "2.7.2"
 robolectric = "4.14.1"
 androidxTestCore = "1.6.1"
+mockito = "5.2.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -61,6 +62,8 @@ robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectr
 androidx-test-core-ktx = { module = "androidx.test:core-ktx", version.ref = "androidxTestCore" }
 hilt-android-testing = { module = "com.google.dagger:hilt-android-testing", version.ref = "hilt" } # Add this
 hilt-lifecycle-viewmodel = { module = "androidx.hilt:hilt-lifecycle-viewmodel", version.ref = "hilt" }
+mockito = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockito"}
+
 
 
 [plugins]

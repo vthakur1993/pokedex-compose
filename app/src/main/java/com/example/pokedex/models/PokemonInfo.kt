@@ -55,7 +55,6 @@ data class PokemonInfo(
 }
 
 fun PokemonInfo.getPokemonStatsForUI(): List<PokemonStatsForUI> {
-    println("Vipulpre getPokemonStatsForUI :: ${hp}, $attack, $speed, $defense, $exp")
     return listOf(
         PokemonStatsForUI("HP", hp, MAX_HP, getHpString(), R.color.bug, R.color.bug),
         PokemonStatsForUI("ATK", attack, PokemonInfo.MAX_ATTACK, getAttackString(), R.color.fire, R.color.fire),
