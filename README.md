@@ -8,6 +8,7 @@
 *   Ϟ **Browse Pokemon:** Infinite scrolling list of Pokemon.
 *   🎨 **Beautiful UI:** Crafted with Material Design 3 and Jetpack Compose.
 *   📖 **Detailed View:** See stats, abilities, types, and more for each Pokemon.
+*   ⭐ **Favourite:** Mark individual Pokémon as favorites
 *   💖 **[WIP] Favorites:** Mark your favorite Pokemon.
 *   🔄 **Offline First:** Data cached with Room for offline access after initial load.
 *   🧪 **Well-Tested:** Unit and UI tests to ensure reliability.
@@ -148,7 +149,7 @@ Please make sure your code adheres to the existing style and that all tests pass
 
 ## 🐛 Known Issues & TODOs
 
-*   [ ] Implement Favorite Pokemon feature.
+*   [x] Implement Favorite Pokemon feature.
 *   [ ] Add more detailed error handling for specific network scenarios.
 *   [ ] Improve UI animations and transitions.
 *   [ ] Add accessibility improvements (Content Descriptions, etc.).
