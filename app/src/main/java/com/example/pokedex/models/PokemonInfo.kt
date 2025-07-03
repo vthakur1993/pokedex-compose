@@ -23,6 +23,7 @@ data class PokemonInfo(
     val exp: Int,
     val types: List<PokemonType>,
     val stats: List<PokemonStats>,
+    val trainerInfo: TrainerInfo = TrainerInfo(false)
 ) {
     val name: String
         get() = nameField.replaceFirstChar { it.uppercase() }
@@ -35,6 +36,8 @@ data class PokemonInfo(
         get() = stats.find { it.stat.nameField == "speed" }?.baseStat ?: 0
     val defense: Int
         get() = stats.find { it.stat.nameField == "defense" }?.baseStat ?: 0
+    val isFavourite: Boolean
+        get() = trainerInfo?.isFavourite == true
 
     fun getIdString(): String = String.format("#%03d", id)
     fun getWeightString(): String = String.format("%.1f KG", weight.toFloat() / 10)

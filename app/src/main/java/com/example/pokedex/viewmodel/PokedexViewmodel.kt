@@ -11,7 +11,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
@@ -39,30 +38,31 @@ class PokedexViewmodel @Inject constructor(
     init {
         viewModelScope.launch {
             _startOperation.flatMapLatest {
-                val pokemonList = pokemonDao.getPokemonList(currentPageIndex).first()
-                if (pokemonList.isEmpty()) {
-                    pokedexNetworkRepository.fetchPokemonList(
-                        page = currentPageIndex,
-                        onStart = {
-                            _state.value = PokedexState.Loading
-                            _footerUIState.value = FooterUIState.Loading
-                        },
-                        onCompleted = {
+                pokemonDao.getPokemonList(currentPageIndex).flatMapLatest {
+                    if (it.isEmpty()) {
+                        pokedexNetworkRepository.fetchPokemonList(
+                            page = currentPageIndex,
+                            onStart = {
+                                _state.value = PokedexState.Loading
+                                _footerUIState.value = FooterUIState.Loading
+                            },
+                            onCompleted = {
 
-                        },
-                        onError = {
-                             _state.value = PokedexState.Error(it)
-                            _footerUIState.value = FooterUIState.Error(it)
-                            currentPageIndex--
-                        }
-                    )
-                        .flatMapLatest { list ->
-                            val map = list.map { it.toAsset(currentPageIndex) }
-                            pokemonDao.insertPokemonList(map)
-                            pokemonDao.getPokemonList(page = currentPageIndex)
-                        }
-                } else {
-                    flow { emit(pokemonList) }
+                            },
+                            onError = {
+                                _state.value = PokedexState.Error(it)
+                                _footerUIState.value = FooterUIState.Error(it)
+                                currentPageIndex--
+                            }
+                        )
+                            .flatMapLatest { list ->
+                                val map = list.map { it.toAsset(currentPageIndex) }
+                                pokemonDao.insertPokemonList(map)
+                                pokemonDao.getPokemonList(page = currentPageIndex)
+                            }
+                    } else {
+                        flow { emit(it) }
+                    }
                 }
             }.collect { it: List<PokemonAsset> ->
                 _pokemonListItems.update { pokemonList ->
@@ -81,6 +81,20 @@ class PokedexViewmodel @Inject constructor(
         if (_state.value == PokedexState.Loading) return
         currentPageIndex++
         fetchPokemons()
+    }
+
+    fun updateAsset(pokemonAsset: PokemonAsset?) {
+        pokemonAsset?.let {
+            _pokemonListItems.update { list ->
+                list.map {
+                    if (it.nameField == pokemonAsset.nameField) {
+                        pokemonAsset
+                    } else {
+                        it
+                    }
+                }
+            }
+        }
     }
 }
 

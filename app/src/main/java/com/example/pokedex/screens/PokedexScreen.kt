@@ -41,14 +41,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
 import androidx.palette.graphics.Palette
 import coil3.BitmapImage
 import coil3.compose.AsyncImage
@@ -57,19 +60,26 @@ import coil3.request.allowHardware
 import coil3.request.crossfade
 import com.example.pokedex.R
 import com.example.pokedex.database.entity.PokemonAsset
+import com.example.pokedex.models.TrainerInfo
 import com.example.pokedex.screens.widgets.PokemonListFooter
 import com.example.pokedex.ui.theme.PokemonTheme
+import com.example.pokedex.utils.Constants
 import com.example.pokedex.utils.getVerticalGradient
 import com.example.pokedex.viewmodel.FooterUIState
 import com.example.pokedex.viewmodel.PokedexState
 import com.example.pokedex.viewmodel.PokedexViewmodel
+import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.launch
 import okhttp3.internal.toImmutableList
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PokedexScreen(modifier: Modifier = Modifier,
-                  pokemonClicked: (PokemonAsset) -> Unit
+fun PokedexScreen(
+    navController: NavController,
+    modifier: Modifier = Modifier,
+                  pokemonClicked: (PokemonAsset) -> Unit,
+                  pokedexViewmodel: PokedexViewmodel = hiltViewModel()
+
 ) {
     Scaffold(
         topBar = {
@@ -80,11 +90,24 @@ fun PokedexScreen(modifier: Modifier = Modifier,
             )
         }
     ) { innerPadding ->
-        val pokedexViewmodel: PokedexViewmodel = hiltViewModel()
         val pokemons: State<PokedexState> = pokedexViewmodel.state.collectAsStateWithLifecycle()
         val pokemonsList = pokedexViewmodel.pokemonListItems.collectAsStateWithLifecycle()
         val footerUiState = pokedexViewmodel.footerUIState.collectAsStateWithLifecycle()
-        PokedexScreen(modifier, innerPadding, pokemons.value, pokemonsList.value.toImmutableList(),
+
+        val stateFlow = navController.currentBackStackEntry?.savedStateHandle?.getStateFlow<PokemonAsset?>(
+            Constants.UPDATED_POKEMON_ASSET,
+            null
+        )?.onCompletion {
+            navController.currentBackStackEntry?.savedStateHandle?.remove<PokemonAsset>(Constants.UPDATED_POKEMON_ASSET)
+        }?.collectAsStateWithLifecycle(null)
+
+        pokedexViewmodel.updateAsset(stateFlow?.value)
+
+        PokedexScreen(
+            modifier,
+            innerPadding,
+            pokemons.value,
+            pokemonsList.value.toImmutableList(),
             footerUiState.value,
             { pokedexViewmodel.fetchMoreItems() },
             pokemonClicked
@@ -185,7 +208,7 @@ private fun PokedexList(
                                 it.result.throwable.printStackTrace()
                             },
                             onSuccess = { result ->
-                                // Check if the drawable is a BitmapDrawable
+                                 //Check if the drawable is a BitmapDrawable
                                 val bitmap =
                                     (result.painter.intrinsicSize.width > 0 && result.painter.intrinsicSize.height > 0)
                                         .let {
@@ -211,7 +234,7 @@ private fun PokedexList(
                             },
                             placeholder = painterResource(R.drawable.ditto),
                             contentDescription = "Pokemon image",
-                            modifier = Modifier.clip(CircleShape),
+                            modifier = Modifier.size(120.dp).clip(CircleShape),
                         )
                         Text(
                             item.name,
@@ -219,6 +242,17 @@ private fun PokedexList(
                                 fontWeight = FontWeight.Bold
                             ),
                             modifier = Modifier.padding(top = 8.dp),
+                        )
+                    }
+                    if (item.isFavourite) {
+                        Image(
+                            painter = painterResource(id = R.drawable.star_rate_24px), // Replace with your WebP drawable ID
+                            contentDescription = "Ditto image",
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(7.dp),
+                            contentScale = ContentScale.Fit,
+                            colorFilter = ColorFilter.tint(colorResource(R.color.electric))
                         )
                     }
                 }
@@ -272,15 +306,8 @@ fun PokedexErrorScreen(message: String, modifier: Modifier = Modifier) {
 @Composable
 fun PokedexScreenPreview() {
     PokemonTheme {
-        val list: List<PokemonAsset> = List(20) { PokemonAsset(0, "Pokemonname: $it", "url: $it") }
-        PokedexScreen(
-            modifier = Modifier.background(Color.White),
-            state = PokedexState.Success,
-            pokemonsList = list,
-            footerUIState = FooterUIState.Loading,
-            fetchMoreItems = {},
-            pokemonClicked = {}
-        )
+        val list: List<PokemonAsset> = List(20) { PokemonAsset(0, "Pokemonname: $it", "url: $it", trainerInfo = TrainerInfo(it % 2 == 0)) }
+        PokedexList(list, rememberLazyGridState(), FooterUIState.EndReached, {})
     }
 }
 

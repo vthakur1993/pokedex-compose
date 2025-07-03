@@ -1,5 +1,10 @@
 package com.example.pokedex.screens
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,11 +37,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -50,6 +58,7 @@ import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import coil3.request.crossfade
 import com.example.pokedex.R
+import com.example.pokedex.database.entity.PokemonAsset
 import com.example.pokedex.models.PokemonInfo
 import com.example.pokedex.models.PokemonStats
 import com.example.pokedex.models.PokemonType
@@ -64,7 +73,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PokemonInfoScreen(backClicked: () -> Unit) {
+fun PokemonInfoScreen(backClicked: () -> Unit, pokemonAssetUpdated: (PokemonAsset) -> Unit) {
         Box(
             modifier = Modifier.fillMaxSize()
         ) {
@@ -72,6 +81,7 @@ fun PokemonInfoScreen(backClicked: () -> Unit) {
             val uiState = remember { pokemonInfoViewmodel.uiState }
             val scrollState = rememberScrollState()
             val uiStateValue = uiState.value
+            val isFavouriteClicked: (Boolean) -> Unit = { it ->  pokemonInfoViewmodel.isFavouriteClicked(it, pokemonAssetUpdated) }
             when (uiStateValue) {
                 is PokemonInfoState.Error -> {
                     PokemonInfoErrorScreen(backClicked, uiStateValue)
@@ -85,7 +95,7 @@ fun PokemonInfoScreen(backClicked: () -> Unit) {
                 }
 
                 is PokemonInfoState.Success -> {
-                    PokemonDetail(uiStateValue.pokemonInfo, uiStateValue.imageUrl, scrollState, backClicked)
+                    PokemonDetail(uiStateValue.pokemonInfo, uiStateValue.imageUrl, scrollState, backClicked, isFavouriteClicked)
                 }
             }
         }
@@ -107,7 +117,9 @@ private fun PokemonInfoErrorScreen(
                         painter = painterResource(id = R.drawable.ic_arrow),
                         tint = Color.White,
                         contentDescription = null,
-                        modifier = Modifier.padding(10.dp).clickable { backClicked() }
+                        modifier = Modifier
+                            .padding(10.dp)
+                            .clickable { backClicked() }
                     )
                 },
                 colors = TopAppBarColors(
@@ -121,7 +133,9 @@ private fun PokemonInfoErrorScreen(
         }
     ) { innerPadding ->
         Box(
-            modifier = Modifier.fillMaxSize().padding(innerPadding),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
             contentAlignment = Alignment.Center
         ) {
             PokedexErrorScreen(uiStateValue.message)
@@ -134,11 +148,14 @@ fun PokemonDetail(
     info: PokemonInfo,
     imageUrl: String,
     scrollState: ScrollState,
-    backClicked: () -> Unit
+    backClicked: () -> Unit,
+    isFavouriteClicked: (Boolean) -> Unit
 ) {
-    Column(Modifier.fillMaxSize().verticalScroll(scrollState),
+    Column(Modifier
+        .fillMaxSize()
+        .verticalScroll(scrollState),
         verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        PokemonHeader(imageUrl, backClicked)
+        PokemonHeader(imageUrl, info.isFavourite, backClicked, isFavouriteClicked)
         PokemonTypeUIWithName(info)
         PokemonStatsUI(info)
     }
@@ -157,12 +174,19 @@ fun PokemonTypeUIWithName(info: PokemonInfo) {
         WeightHeightUI(info)
 
         Row(
-            Modifier.fillMaxWidth().padding(top = 16.dp),
+            Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp, alignment = Alignment.CenterHorizontally),
         ) {
             info.types.forEach {
                 Text(
-                    modifier = Modifier.background(getPokemonTypeColor(it.type.nameField), shape = RoundedCornerShape(16.dp)).padding(horizontal = 26.dp, vertical = 4.dp),
+                    modifier = Modifier
+                        .background(
+                            getPokemonTypeColor(it.type.nameField),
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                        .padding(horizontal = 26.dp, vertical = 4.dp),
                     text = it.type.name,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
@@ -205,7 +229,7 @@ fun LabelValueColumn(label: String, value: String) {
 
 
 @Composable
-fun PokemonHeader(imageUrl: String, backClicked: () -> Unit) {
+fun PokemonHeader(imageUrl: String, isFavourite: Boolean, backClicked: () -> Unit, isFavouriteClicked: (Boolean) -> Unit) {
     val shape = RoundedCornerShape(
         topStart = 0.dp,
         topEnd = 0.dp,
@@ -214,6 +238,18 @@ fun PokemonHeader(imageUrl: String, backClicked: () -> Unit) {
     )
     val coroutineScope = rememberCoroutineScope()
     var dominantColor by remember { mutableStateOf(Brush.linearGradient(colors = listOf(Color.Gray, Color.Gray))) }
+    var isAnimatingFavourite by remember { mutableStateOf(false) }
+
+    val iconScale by animateFloatAsState(
+        targetValue = if (isAnimatingFavourite) 1.3f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        finishedListener = {
+            if (isAnimatingFavourite) isAnimatingFavourite = false
+        }
+    )
 
     Box(
         modifier = Modifier
@@ -224,9 +260,11 @@ fun PokemonHeader(imageUrl: String, backClicked: () -> Unit) {
     ) {
         Row(
             modifier = Modifier
+                .fillMaxWidth()
                 .padding(12.dp)
                 .statusBarsPadding(),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween // Key part
         ) {
             Icon(
                 modifier = Modifier
@@ -236,6 +274,29 @@ fun PokemonHeader(imageUrl: String, backClicked: () -> Unit) {
                 tint = Color.White,
                 contentDescription = null,
             )
+            Crossfade(
+                targetState = isFavourite,
+                animationSpec = tween(durationMillis = 300),
+                label = "FavoriteIconCrossfade"
+            ) { currentlyFavourite ->
+                Icon(
+                    painter = if (currentlyFavourite) painterResource(R.drawable.star_rate_24px) else painterResource(R.drawable.star_24px),
+                    modifier = Modifier
+                        .padding(end = 6.dp)
+                        .scale(iconScale)
+                        .toggleable(
+                            value = isFavourite,
+                            enabled = true,
+                            onValueChange = {
+                                isAnimatingFavourite = true
+                                isFavouriteClicked(it)
+                            }
+                        ),
+                    tint = colorResource(R.color.electric),
+                    contentDescription = null,
+                )
+            }
+
         }
 
         AsyncImage(
@@ -287,7 +348,7 @@ fun PokemonHeader(imageUrl: String, backClicked: () -> Unit) {
 @Preview
 @Composable
 fun PokemonHeaderPreview() {
-    PokemonHeader("", {})
+    PokemonHeader("", false, {}, {})
 }
 
 @Preview
@@ -301,7 +362,7 @@ fun PokemonDetailPreview() {
         PokemonStats(150, Stat("attack")),
         PokemonStats(50, Stat("defense")),
     ))
-    PokemonDetail(info, "", rememberScrollState()) { }
+    PokemonDetail(info, "", rememberScrollState(), { }, { })
 }
 
 @Preview

@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.ksp)
     alias(libs.plugins.kotlin.hilt)
     id("kotlin-parcelize")
+    id("androidx.room") version libs.versions.room
     id("org.jetbrains.kotlin.plugin.serialization") version "2.1.10" // Use the same version as your Kotlin plugin
 }
 
@@ -49,6 +50,9 @@ android {
         unitTests.apply {
             isIncludeAndroidResources = true
         }
+    }
+    room {
+        schemaDirectory("$projectDir/schemas")
     }
 }
 
@@ -95,4 +99,5 @@ dependencies {
     ksp(libs.room.compiler)
     ksp(libs.androidx.hilt.compiler)
     ksp(libs.retrofit.moshi.codegen)
+
 }
