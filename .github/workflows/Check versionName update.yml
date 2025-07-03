@@ -1,0 +1,63 @@
+name: Check versionName update and tag existence
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read  # Only need read access for checking tags
+
+jobs:
+  check_version_update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history to check for existing tags
+
+      - name: Get versionName from build.gradle.kts
+        id: version
+        run: |
+          VERSION_NAME=$(grep -oP 'versionName\s*=\s*["'\'']\K[^"'\''"]+' app/build.gradle.kts | head -1)
+          echo "versionName: $VERSION_NAME"
+          
+          if [ -z "$VERSION_NAME" ]; then
+            echo "❌ versionName not found in build.gradle.kts"
+            exit 1
+          fi
+
+          echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_OUTPUT
+
+      - name: Check if versionName line was modified
+        id: diff_check
+        run: |
+          git fetch origin main:main
+          if git diff --name-only origin/main...HEAD | grep -q "app/build.gradle.kts"; then
+            if git diff origin/main...HEAD app/build.gradle.kts | grep -q "versionName"; then
+              echo "VERSION_UPDATED=true" >> $GITHUB_OUTPUT
+            else
+              echo "VERSION_UPDATED=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "VERSION_UPDATED=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Fail if versionName not updated
+        if: steps.diff_check.outputs.VERSION_UPDATED == 'false'
+        run: |
+          echo "❌ versionName was not updated in this PR. Please update it before merging."
+          exit 1
+
+      - name: Check if tag already exists
+        run: |
+          TAG_NAME="v${{ steps.version.outputs.VERSION_NAME }}"
+          echo "Checking for existing tag: $TAG_NAME"
+          if git tag --list | grep -q "^${TAG_NAME}$"; then
+            echo "❌ Tag $TAG_NAME already exists. Please update versionName in build.gradle.kts."
+            exit 1
+          else
+            echo "✅ Tag $TAG_NAME does not exist yet. Good to go!"
+          fi

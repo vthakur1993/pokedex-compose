@@ -19,6 +19,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class) // Use Robolectric for local Android environment
+//@Config(sdk = [Build.VERSION_CODES.Q], application = TestApp::class)
 class PokemonDaoTest {
 
     private lateinit var db: PokemonDatabase
@@ -48,11 +49,11 @@ class PokemonDaoTest {
 
         var pokemonAssetsFromDb = pokemonDao.getPokemonList(0).first()
         assert(pokemonAssetsFromDb.size == 1)
-        assert(pokemonAssetsFromDb[0].nameField == "PokemonAsset0")
+        assert(pokemonAssetsFromDb[0].nameField == "PokemonListItem0")
 
         pokemonAssetsFromDb = pokemonDao.getPokemonList(1).first()
         assert(pokemonAssetsFromDb.size == 1)
-        assert(pokemonAssetsFromDb[0].nameField == "PokemonAsset1")
+        assert(pokemonAssetsFromDb[0].nameField == "PokemonListItem1")
     }
 
     @Test
@@ -71,7 +72,7 @@ class PokemonDaoTest {
         pokemonAssetsFromDb = pokemonDao.getPokemonList(12).first()
         assert(pokemonAssetsFromDb.size == 1)
         assert(pokemonAssetsFromDb.first().page == 12)
-        assert(pokemonAssetsFromDb.first().name == "PokemonAsset0")
+        assert(pokemonAssetsFromDb.first().name == "PokemonListItem0")
     }
 
     @Test

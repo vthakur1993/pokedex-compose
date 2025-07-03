@@ -3,6 +3,7 @@ package com.example.pokedex.database.entity
 import android.os.Parcelable
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.example.pokedex.models.TrainerInfo
 import com.example.pokedex.navigation.navtypes.PokemonListItemNavType
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
@@ -20,9 +21,13 @@ data class PokemonAsset(
     @field:Json(name = "name")
     @PrimaryKey val nameField: String,
     val url: String,
+    val trainerInfo: TrainerInfo = TrainerInfo(false)
 ): Parcelable {
     val name: String
         get() = nameField.replaceFirstChar { it.uppercase() }
+
+    val isFavourite: Boolean
+        get() = trainerInfo.isFavourite == true
 
     val imageUrl: String
         inline get() {
