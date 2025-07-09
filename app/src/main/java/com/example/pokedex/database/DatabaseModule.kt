@@ -4,8 +4,8 @@ import android.content.Context
 import androidx.room.Room
 import com.example.pokedex.database.converters.PokemonStatsConverter
 import com.example.pokedex.database.converters.PokemonTypeConverter
-import com.example.pokedex.database.converters.TrainerInfoConverter
 import com.example.pokedex.database.migrations.MIGRATION_1_2
+import com.example.pokedex.database.migrations.MIGRATION_3_4
 import com.google.gson.Gson
 import dagger.Module
 import dagger.Provides
@@ -23,8 +23,7 @@ object DatabaseModule {
     fun database(
         @ApplicationContext context: Context,
         pokemonStatsConverter: PokemonStatsConverter,
-        pokemonTypeConverter: PokemonTypeConverter,
-        trainerInfoConverter: TrainerInfoConverter
+        pokemonTypeConverter: PokemonTypeConverter
     ): PokemonDatabase {
         return Room.databaseBuilder(
             context.applicationContext,
@@ -33,8 +32,8 @@ object DatabaseModule {
         )
             .addTypeConverter(pokemonStatsConverter)
             .addTypeConverter(pokemonTypeConverter)
-            .addTypeConverter(trainerInfoConverter)
             .addMigrations(MIGRATION_1_2)
+            .addMigrations(MIGRATION_3_4)
             .build()
     }
 
@@ -54,12 +53,6 @@ object DatabaseModule {
     @Provides
     fun pokemonStatsConverter(gson: Gson): PokemonStatsConverter {
         return PokemonStatsConverter(gson)
-    }
-
-    @Singleton
-    @Provides
-    fun trainerInfoConverter(gson: Gson): TrainerInfoConverter {
-        return TrainerInfoConverter(gson)
     }
 
     @Singleton

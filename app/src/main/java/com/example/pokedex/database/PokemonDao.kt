@@ -16,6 +16,9 @@ interface PokemonDao {
     @Query("SELECT * FROM PokemonAsset WHERE page = :page")
     fun getPokemonList(page: Int): Flow<List<PokemonAsset>>
 
+    @Query("SELECT * FROM PokemonAsset WHERE isFavourite = 1")
+    fun getFavouritePokemonList(): Flow<List<PokemonAsset>>
+
     @Update(onConflict = REPLACE)
     suspend fun updatePokemonAsset(pokemonAsset: PokemonAsset)
 }

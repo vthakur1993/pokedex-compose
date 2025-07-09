@@ -23,10 +23,9 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarColors
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -68,6 +67,7 @@ import com.example.pokedex.utils.getVerticalGradient
 import com.example.pokedex.viewmodel.FooterUIState
 import com.example.pokedex.viewmodel.PokedexState
 import com.example.pokedex.viewmodel.PokedexViewmodel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.launch
 import okhttp3.internal.toImmutableList
@@ -77,42 +77,33 @@ import okhttp3.internal.toImmutableList
 fun PokedexScreen(
     navController: NavController,
     modifier: Modifier = Modifier,
-                  pokemonClicked: (PokemonAsset) -> Unit,
-                  pokedexViewmodel: PokedexViewmodel = hiltViewModel()
-
+    pokemonClicked: (PokemonAsset) -> Unit,
+    pokedexViewmodel: PokedexViewmodel = hiltViewModel()
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Pokedex") },
-                modifier = modifier.background(Color.Red),
-                colors = TopAppBarColors(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.onPrimary, MaterialTheme.colorScheme.primary)
-            )
-        }
-    ) { innerPadding ->
-        val pokemons: State<PokedexState> = pokedexViewmodel.state.collectAsStateWithLifecycle()
-        val pokemonsList = pokedexViewmodel.pokemonListItems.collectAsStateWithLifecycle()
-        val footerUiState = pokedexViewmodel.footerUIState.collectAsStateWithLifecycle()
+    val pokemons: State<PokedexState> = pokedexViewmodel.state.collectAsStateWithLifecycle()
+    val pokemonsList = pokedexViewmodel.pokemonListItems.collectAsStateWithLifecycle()
+    val footerUiState = pokedexViewmodel.footerUIState.collectAsStateWithLifecycle()
 
-        val stateFlow = navController.currentBackStackEntry?.savedStateHandle?.getStateFlow<PokemonAsset?>(
-            Constants.UPDATED_POKEMON_ASSET,
-            null
+    val stateFlow =
+        navController.currentBackStackEntry?.savedStateHandle?.getStateFlow<PokemonAsset?>(
+            Constants.UPDATED_POKEMON_ASSET, null
         )?.onCompletion {
-            navController.currentBackStackEntry?.savedStateHandle?.remove<PokemonAsset>(Constants.UPDATED_POKEMON_ASSET)
+            navController.currentBackStackEntry?.savedStateHandle?.remove<PokemonAsset>(
+                Constants.UPDATED_POKEMON_ASSET
+            )
         }?.collectAsStateWithLifecycle(null)
 
-        pokedexViewmodel.updateAsset(stateFlow?.value)
+    pokedexViewmodel.updateAsset(stateFlow?.value)
 
-        PokedexScreen(
-            modifier,
-            innerPadding,
-            pokemons.value,
-            pokemonsList.value.toImmutableList(),
-            footerUiState.value,
-            { pokedexViewmodel.fetchMoreItems() },
-            pokemonClicked
-        )
-    }
+    PokedexScreen(
+        modifier,
+        innerPadding = PaddingValues(0.dp),
+        pokemons.value,
+        pokemonsList.value.toImmutableList(),
+        footerUiState.value,
+        { pokedexViewmodel.fetchMoreItems() },
+        pokemonClicked
+    )
 }
 
 @Composable
@@ -128,8 +119,7 @@ private fun PokedexScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .padding(innerPadding),
-        contentAlignment = Alignment.Center
+            .padding(innerPadding), contentAlignment = Alignment.Center
     ) {
         val lazyListState = rememberLazyGridState()
         val reachedBottom by remember {
@@ -163,111 +153,136 @@ private fun PokedexScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PokedexList(
+fun PokedexList(
     pokemonsList: List<PokemonAsset>,
     lazyListState: LazyGridState,
     footerUIState: FooterUIState,
-    pokemonClicked: (PokemonAsset) -> Unit) {
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
-        contentPadding = PaddingValues(8.dp),
-        state = lazyListState
+    pokemonClicked: (PokemonAsset) -> Unit
+) {
+    var isRefreshing by remember { mutableStateOf(false) }
+    val state = rememberPullToRefreshState()
+
+    LaunchedEffect(isRefreshing) {
+        if (isRefreshing) {
+            delay(2000)
+            isRefreshing = false
+        }
+    }
+
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = {
+            isRefreshing = true
+            // state.startRefresh() // Usually not needed if isRefreshing drives it
+        },
+        state = state, // Pass the state
     ) {
-        items(pokemonsList, key = { it.url }) { item ->
-            val coroutineScope = rememberCoroutineScope()
-            var dominantColor by remember(key1 = item.name) { mutableStateOf(Brush.linearGradient(colors = listOf(Color.Gray, Color.Gray))) }
-            val shape = RoundedCornerShape(14.dp)
-            Card(
-                modifier = Modifier.padding(8.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                shape = shape,
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                onClick = { pokemonClicked(item) }
-            ) {
-                Box(modifier = Modifier
-                    .fillMaxSize()
-                    .background(brush = dominantColor, shape = shape)
-                ) {
-                    Column(
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            contentPadding = PaddingValues(8.dp),
+            state = lazyListState
+        ) {
+            items(pokemonsList, key = { it.url }) { item ->
+                val coroutineScope = rememberCoroutineScope()
+                var dominantColor by remember(key1 = item.name) {
+                    mutableStateOf(
+                        Brush.linearGradient(
+                            colors = listOf(Color.Gray, Color.Gray)
+                        )
+                    )
+                }
+                val shape = RoundedCornerShape(14.dp)
+                Card(
+                    modifier = Modifier.padding(8.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                    shape = shape,
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                    onClick = { pokemonClicked(item) }) {
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp), // Padding inside the card content area
-                        horizontalAlignment = Alignment.CenterHorizontally, // Center children horizontally
-                        verticalArrangement = Arrangement.Center // Center children vertically if space allows
+                            .fillMaxSize()
+                            .background(brush = dominantColor, shape = shape)
                     ) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(LocalContext.current)
-                                .data(item.imageUrl)
-                                .crossfade(true)
-                                .allowHardware(false)
-                                .build(),
-                            contentScale = ContentScale.Fit,
-                            error = painterResource(R.drawable.ic_launcher_background),
-                            onError = {
-                                it.result.throwable.printStackTrace()
-                            },
-                            onSuccess = { result ->
-                                 //Check if the drawable is a BitmapDrawable
-                                val bitmap =
-                                    (result.painter.intrinsicSize.width > 0 && result.painter.intrinsicSize.height > 0)
-                                        .let {
-                                            if (result.result.image is BitmapImage) {
-                                                (result.result.image as BitmapImage).bitmap
-                                            } else {
-                                                // Handle other drawable types if necessary, e.g., vector drawables
-                                                // You might need to draw them to a new bitmap
-                                                null
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp), // Padding inside the card content area
+                            horizontalAlignment = Alignment.CenterHorizontally, // Center children horizontally
+                            verticalArrangement = Arrangement.Center // Center children vertically if space allows
+                        ) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(item.imageUrl).crossfade(true).allowHardware(false)
+                                    .build(),
+                                contentScale = ContentScale.Fit,
+                                error = painterResource(R.drawable.ic_launcher_background),
+                                onError = {
+                                    it.result.throwable.printStackTrace()
+                                },
+                                onSuccess = { result ->
+                                    //Check if the drawable is a BitmapDrawable
+                                    val bitmap =
+                                        (result.painter.intrinsicSize.width > 0 && result.painter.intrinsicSize.height > 0).let {
+                                                if (result.result.image is BitmapImage) {
+                                                    (result.result.image as BitmapImage).bitmap
+                                                } else {
+                                                    // Handle other drawable types if necessary, e.g., vector drawables
+                                                    // You might need to draw them to a new bitmap
+                                                    null
+                                                }
                                             }
-                                        }
-                                bitmap?.let {
-                                    Palette.from(it).generate { palette ->
-                                        palette?.let {
-                                            coroutineScope.launch {
-                                                palette.getVerticalGradient().collect {
-                                                    dominantColor = it
+                                    bitmap?.let {
+                                        Palette.from(it).generate { palette ->
+                                            palette?.let {
+                                                coroutineScope.launch {
+                                                    palette.getVerticalGradient().collect {
+                                                        dominantColor = it
+                                                    }
                                                 }
                                             }
                                         }
                                     }
-                                }
-                            },
-                            placeholder = painterResource(R.drawable.ditto),
-                            contentDescription = "Pokemon image",
-                            modifier = Modifier.size(120.dp).clip(CircleShape),
-                        )
-                        Text(
-                            item.name,
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontWeight = FontWeight.Bold
-                            ),
-                            modifier = Modifier.padding(top = 8.dp),
-                        )
-                    }
-                    if (item.isFavourite) {
-                        Image(
-                            painter = painterResource(id = R.drawable.star_rate_24px), // Replace with your WebP drawable ID
-                            contentDescription = "Ditto image",
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(7.dp),
-                            contentScale = ContentScale.Fit,
-                            colorFilter = ColorFilter.tint(colorResource(R.color.electric))
-                        )
+                                },
+                                placeholder = painterResource(R.drawable.ditto),
+                                contentDescription = "Pokemon image",
+                                modifier = Modifier
+                                    .size(120.dp)
+                                    .clip(CircleShape),
+                            )
+                            Text(
+                                item.name,
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                modifier = Modifier.padding(top = 8.dp),
+                            )
+                        }
+                        if (item.isFavourite) {
+                            Image(
+                                painter = painterResource(id = R.drawable.star_rate_24px), // Replace with your WebP drawable ID
+                                contentDescription = "Ditto image",
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(7.dp),
+                                contentScale = ContentScale.Fit,
+                                colorFilter = ColorFilter.tint(colorResource(R.color.electric))
+                            )
+                        }
                     }
                 }
+
             }
 
-        }
-
-        if (footerUIState != FooterUIState.EndReached && !pokemonsList.isEmpty()) {
-            item(
-                span = {
-                    // This is the key part: GridItemSpan(maxLineSpan) makes it span all columns
-                    GridItemSpan(maxLineSpan)
+            if (footerUIState != FooterUIState.EndReached && !pokemonsList.isEmpty()) {
+                item(
+                    span = {
+                        // This is the key part: GridItemSpan(maxLineSpan) makes it span all columns
+                        GridItemSpan(maxLineSpan)
+                    }) {
+                    PokemonListFooter(footerUIState)
                 }
-            ) {
-                PokemonListFooter(footerUIState)
             }
         }
     }
@@ -306,7 +321,11 @@ fun PokedexErrorScreen(message: String, modifier: Modifier = Modifier) {
 @Composable
 fun PokedexScreenPreview() {
     PokemonTheme {
-        val list: List<PokemonAsset> = List(20) { PokemonAsset(0, "Pokemonname: $it", "url: $it", trainerInfo = TrainerInfo(it % 2 == 0)) }
+        val list: List<PokemonAsset> = List(20) {
+            PokemonAsset(
+                0, "Pokemonname: $it", "url: $it", trainerInfo = TrainerInfo(it % 2 == 0)
+            )
+        }
         PokedexList(list, rememberLazyGridState(), FooterUIState.EndReached, {})
     }
 }

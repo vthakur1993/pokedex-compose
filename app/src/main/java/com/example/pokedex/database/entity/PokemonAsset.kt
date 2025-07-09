@@ -1,6 +1,7 @@
 package com.example.pokedex.database.entity
 
 import android.os.Parcelable
+import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.example.pokedex.models.TrainerInfo
@@ -21,7 +22,7 @@ data class PokemonAsset(
     @field:Json(name = "name")
     @PrimaryKey val nameField: String,
     val url: String,
-    val trainerInfo: TrainerInfo = TrainerInfo(false)
+    @Embedded val trainerInfo: TrainerInfo = TrainerInfo(false)
 ): Parcelable {
     val name: String
         get() = nameField.replaceFirstChar { it.uppercase() }
