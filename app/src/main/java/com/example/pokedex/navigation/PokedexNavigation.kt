@@ -6,6 +6,7 @@ import androidx.navigation.compose.composable
 import com.example.pokedex.database.entity.PokemonAsset
 import com.example.pokedex.navigation.PokedexRoutes.PokemonInfoScreenRoute
 import com.example.pokedex.navigation.navtypes.PokemonListItemNavType
+import com.example.pokedex.screens.FavouritePokemonScreen
 import com.example.pokedex.screens.PokedexScreen
 import com.example.pokedex.screens.PokemonInfoScreen
 import com.example.pokedex.utils.Constants
@@ -30,5 +31,11 @@ fun NavGraphBuilder.pokedexNavigation(
             pokemonAssetUpdated = { updatedAsset ->
                 navController.previousBackStackEntry?.savedStateHandle?.set(Constants.UPDATED_POKEMON_ASSET, updatedAsset)
             })
+    }
+
+    composable<PokedexRoutes.FavouritePokemons> {
+        FavouritePokemonScreen({
+            navController.navigate(PokemonInfoScreenRoute(it))
+        })
     }
 }

@@ -1,6 +1,7 @@
 package com.example.pokedex.models
 
 import androidx.annotation.ColorRes
+import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.example.pokedex.R
@@ -23,7 +24,7 @@ data class PokemonInfo(
     val exp: Int,
     val types: List<PokemonType>,
     val stats: List<PokemonStats>,
-    val trainerInfo: TrainerInfo = TrainerInfo(false)
+    @Embedded val trainerInfo: TrainerInfo = TrainerInfo(false)
 ) {
     val name: String
         get() = nameField.replaceFirstChar { it.uppercase() }

@@ -13,7 +13,7 @@ fun PokedexNavHost(navController: NavHostController) {
         com.example.pokedex.di.NavTypeEntryPoint::class.java
     ).getPokemonListItemNavType()
 
-    NavHost(navController, startDestination = PokedexRoutes.PokedexScreenRoute) {
+    NavHost(navController, startDestination = PokedexRoutes.PokedexScreenRoute()) {
         pokedexNavigation(navController = navController, pokemonListItemNavType)
     }
 }
